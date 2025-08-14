@@ -13,12 +13,16 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@langchain/community": "^0.3.50",
+    "@langchain/core": "^0.3.70",
+    "@langchain/textsplitters": "^0.1.0",
     "@types/cors": "^2.8.19",
     "@types/multer": "^2.0.0",
     "bullmq": "^5.57.0",
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "multer": "^2.0.2",
+    "pdf-parse": "^1.1.1",
     "typescript": "^5.9.2"
   },
   "devDependencies": {
