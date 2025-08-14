@@ -1,6 +1,8 @@
 import { Worker } from "bullmq";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
 import { CharacterTextSplitter } from "@langchain/textsplitters";
+import { OllamaEmbeddings } from "@langchain/ollama";
+import { QdrantVectorStore } from "@langchain/qdrant";
 
 const fileUploadWorker = new Worker('fileUploadQueue', async job => {
     // here we do something with the job
@@ -18,7 +20,7 @@ const fileUploadWorker = new Worker('fileUploadQueue', async job => {
         if(!docs) {
             console.log("Failed to load PDF file");
         }
-        console.log("Docs are: ", docs)
+        // console.log("Docs are: ", docs)
 
         // here we get the doc in docs[0]
         // now we need to do the splitting
@@ -27,10 +29,23 @@ const fileUploadWorker = new Worker('fileUploadQueue', async job => {
             chunkOverlap: 10,
         });
         const texts = await textSplitter.splitDocuments(docs);
-        console.log("texts after splittng: ", texts)
+        // console.log("texts after splittng: ", texts)
         console.log("texts length: ", texts.length);
         console.log("Docs length:", docs.length)
-        
+        const embeddings = new OllamaEmbeddings({
+            model: "nomic-embed-text",
+            baseUrl: "http://localhost:11434",
+        })
+        const testEmbedding = await embeddings.embedQuery("test");
+        console.log("Embedding dimension:", testEmbedding.length);
+        console.log("Starting instantiation of vector store via embeddings");
+        const vectorStore = await QdrantVectorStore.fromDocuments( [],embeddings, {
+            url: "http://localhost:6333",
+            collectionName: "chat_rag"
+        })
+        console.log("Starting addition to vector store via embeddings");
+        await vectorStore.addDocuments(texts);
+        console.log("Adding documents completed")
     }
    
 }, {
