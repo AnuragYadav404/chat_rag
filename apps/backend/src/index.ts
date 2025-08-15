@@ -122,7 +122,10 @@ app.post("/query", async (req, res) => {
     const decoder = new TextDecoder();
     while (true) {
       const { done, value } = await reader.read();
-      if (done) break;
+      if (done) {
+        res.end();
+        break;
+      }
       const text = decoder.decode(value);
       /*
         chunk example:
@@ -131,7 +134,9 @@ app.post("/query", async (req, res) => {
       */
       const parsed = JSON.parse(text);
       process.stdout.write(parsed.response);
+      res.write(parsed.response);
     }
+    return res.status(200);
 
     // // console.log("Model fetching complete")
     // const data = await GPTResponse.json();
