@@ -1,51 +1,50 @@
 import { Worker } from "bullmq";
 import { PDFLoader } from "@langchain/community/document_loaders/fs/pdf";
-import { CharacterTextSplitter } from "@langchain/textsplitters";
+import { CharacterTextSplitter, RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { OllamaEmbeddings } from "@langchain/ollama";
 import { QdrantVectorStore } from "@langchain/qdrant";
 
 const fileUploadWorker = new Worker('fileUploadQueue', async job => {
-    // here we do something with the job
-    // what does this job do here now?
-    // simple -> creates embedding for the file and stores it in a vectorDB
     if(job.name==="file-upload-ready") {
-        // here the worker needs to do the embedding things:
-        // 1. create embedding for the contents of the file in the queue:
-        // 2. store these embeddings in a vector DB
         const data = JSON.parse(job.data);
         const filePath = data.filePath;
-        console.log(filePath)
-        const loader = new PDFLoader(filePath);
+
+
+        // here when we are usng PDFLoader, each page in itself becomes a chunk
+        // we probably do not want this
+        // or probably need to look into overlapping logic
+
+
+        const loader = new PDFLoader(filePath, {
+            splitPages: false
+        });
         const docs = await loader.load();
         if(!docs) {
             console.log("Failed to load PDF file");
         }
-        // console.log("Docs are: ", docs)
 
-        // here we get the doc in docs[0]
-        // now we need to do the splitting
-        const textSplitter = new CharacterTextSplitter({
-            chunkSize: 100,
-            chunkOverlap: 10,
+        const textSplitter = new RecursiveCharacterTextSplitter({
+            chunkSize: 1500,
+            chunkOverlap: 200,
         });
         const texts = await textSplitter.splitDocuments(docs);
-        // console.log("texts after splittng: ", texts)
-        console.log("texts length: ", texts.length);
-        console.log("Docs length:", docs.length)
+
+        // here when we are usng PDFLoader, each page in itself becomes a chunk
+
         const embeddings = new OllamaEmbeddings({
             model: "nomic-embed-text",
             baseUrl: "http://localhost:11434",
         })
-        const testEmbedding = await embeddings.embedQuery("test");
-        console.log("Embedding dimension:", testEmbedding.length);
-        console.log("Starting instantiation of vector store via embeddings");
-        const vectorStore = await QdrantVectorStore.fromDocuments( [],embeddings, {
+
+        // console.log("Starting instantiation of vector store via embeddings");
+        const vectorStore = await QdrantVectorStore.fromExistingCollection(embeddings, {
             url: "http://localhost:6333",
             collectionName: "chat_rag"
         })
         console.log("Starting addition to vector store via embeddings");
         await vectorStore.addDocuments(texts);
         console.log("Adding documents completed")
+        // worker is done here, its only job was to creat and store embeddings for a file upload
     }
    
 }, {
