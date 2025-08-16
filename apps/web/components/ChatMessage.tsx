@@ -1,4 +1,4 @@
-export default function ChatMessage(props: {messages: any, newMessage: string}) {
+export default function ChatMessage(props: {messages: string[], newMessage: string}) {
     const newMessageLines = props.newMessage.split("\n");
     return (
         <div className="flex flex-1">
